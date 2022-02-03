@@ -29,6 +29,7 @@ const Home = () => {
   const [message, setMessage] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState<IUser[]>([])
+  const [chatHistory, setChatHistory] = useState<IMessage[]>([])
 
   // socket.io (both FE&BE) is a event-driven library!
   // the first event that happens when a client connects to the server
@@ -60,6 +61,18 @@ const Home = () => {
         // but the one which just connected
         console.log('a new user just connected!')
         fetchOnlineUsers()
+      })
+      socket.on('message', (message) => {
+        console.log('new message received!')
+        // how can I receive the message?
+        // it's in the argument of the arrow function!
+        console.log(message)
+        // setChatHistory([...chatHistory, message])
+        // this is buggy, because the value of chatHistory is not re-evaluated every time
+        // this code is effectively put in memory just once
+        setChatHistory((currentChatHistory) => [...currentChatHistory, message])
+        // this is the second way of using a setter function of a useState hook,
+        // it's reading the current value on-time before returning the new one
       })
     })
   }, [])
@@ -107,6 +120,11 @@ const Home = () => {
     }
 
     socket.emit('sendmessage', newMessage)
+    // let's take care of the sender's view, appending the message
+    // to the chat history
+    setChatHistory([...chatHistory, newMessage])
+    // this will take care of updating just my view!
+    setMessage('')
   }
 
   return (
@@ -125,11 +143,16 @@ const Home = () => {
           </Form>
           {/* MESSAGES AREA */}
           <ListGroup>
-            <ListGroup.Item>Cras justo odio</ListGroup.Item>
-            <ListGroup.Item>Dapibus ac facilisis in</ListGroup.Item>
-            <ListGroup.Item>Morbi leo risus</ListGroup.Item>
-            <ListGroup.Item>Porta ac consectetur ac</ListGroup.Item>
-            <ListGroup.Item>Vestibulum at eros</ListGroup.Item>
+            {chatHistory.map((message, i) => (
+              <ListGroup.Item key={i}>
+                <strong>{message.sender}</strong>
+                <span className='mx-1'> | </span>
+                <span>{message.text}</span>
+                <span className='ml-2' style={{ fontSize: '0.7rem' }}>
+                  {new Date(message.timestamp).toLocaleTimeString('en-US')}
+                </span>
+              </ListGroup.Item>
+            ))}
           </ListGroup>
           {/* NEW MESSAGE AREA */}
           <Form onSubmit={handleSubmitMessage}>
